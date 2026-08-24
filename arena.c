@@ -65,15 +65,15 @@ static inline size_t align_up(size_t n){
 
 arena* arena_create(){
 
-    arena* arena_struct = (arena*)calloc(1, sizeof(arena));
+    arena* arena_pool = (arena*)calloc(1, sizeof(arena));
 
-    if(arena_struct == NULL){
+    if(arena_pool == NULL){
         return NULL;
     }
     /* head and current are zero-initialized to NULL by calloc.
      * The first block is lazily allocated on first use. */
 
-    return arena_struct;
+    return arena_pool;
 
 }
 
