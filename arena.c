@@ -240,9 +240,9 @@ void arena_destroy(arena* arena_pool){
         return;
     }
 
-    if(arena_pool->head == NULL){
-        return;
-    }
+    // if(arena_pool->head == NULL){
+    //     return;
+    // }
 
     /* Traverse and free all blocks */
     while(arena_pool->head != NULL){
