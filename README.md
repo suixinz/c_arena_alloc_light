@@ -31,19 +31,19 @@ c
 include "arena.h"
 int main() {
 /* Create arena */
-arena* ar = arena_create();
-if (!ar) return 1;
+arena* arena_pool = arena_create();
+if (!arena_pool) return 1;
 
 /* Allocate */
-int* nums = arena_malloc(ar, 10 * sizeof(int));
-char* str = arena_calloc(ar, 64, sizeof(char));
+int* nums = arena_malloc(arena_pool, 10 * sizeof(int));
+char* str = arena_calloc(arena_pool, 64, sizeof(char));
 
 /* Use normally */
 nums[0] = 42;
 strcpy(str, "hello arena");
 
 /* One call to free everything */
-arena_destroy(ar);
+arena_destroy(arena_pool);
 return 0;
 }
 
