@@ -83,7 +83,7 @@ arena* arena_create(){
  * @param n  Requested allocation size (ensures the new block can hold at least n bytes).
  * @return true on success, false on failure.
  */
-static bool arena_block_insert_tail(arena* arena_pool, size_t n){
+static bool arena_block_insert_tail(arena* const arena_pool, size_t n){
 
     /* Allocate block descriptor */
     block* new_block = (block*)malloc(sizeof(block));
@@ -130,7 +130,7 @@ static bool arena_block_insert_tail(arena* arena_pool, size_t n){
  * @param n  Requested allocation size in bytes.
  * @return true if space is insufficient (new block needed), false if space is adequate.
  */
-static bool out_of_current_block_capacity(arena* arena_pool, size_t n){
+static bool out_of_current_block_capacity(const arena* const arena_pool, size_t n){
 
     if(arena_pool->head == NULL && arena_pool->current == NULL){
         return true;
@@ -146,7 +146,7 @@ static bool out_of_current_block_capacity(arena* arena_pool, size_t n){
 
 }
 
-void* arena_calloc(arena* arena_pool, size_t count, size_t size){
+void* arena_calloc(arena* const arena_pool, size_t count, size_t size){
     
     if(count == 0 || size == 0){
         return NULL;
@@ -187,7 +187,7 @@ void* arena_calloc(arena* arena_pool, size_t count, size_t size){
 
 }
 
-void* arena_malloc(arena* arena_pool, size_t size){
+void* arena_malloc(arena* const arena_pool, size_t size){
 
     if (size == 0){
         return NULL;
@@ -234,7 +234,7 @@ static void block_destroy(block* bck){
 
 }
 
-void arena_destroy(arena* arena_pool){
+void arena_destroy(arena* const arena_pool){
 
     if(arena_pool == NULL){
         return;
