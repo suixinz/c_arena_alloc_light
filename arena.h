@@ -77,18 +77,18 @@ arena* arena_create();
  *
  * Alignment guarantee: returned pointer address is a multiple of ALIGNMENT.
  * Overflow check: returns NULL if count * size overflows.
- * Returns NULL if arena_pool is NULL.
+ * Returns NULL if arena is NULL.
  */
 void* arena_calloc(arena* arena_pool, size_t count, size_t size);
 
 /**
  * @brief Allocates memory from the arena without zero-initialization (analogous to malloc).
- * @param arena_pool   Arena instance pointer.
+ * @param arena_pool Arena instance pointer.
  * @param size Number of bytes to allocate.
  * @return Aligned pointer to uninitialized memory on success, NULL on failure.
  *
  * Alignment guarantee: returned pointer address is a multiple of ALIGNMENT.
- * Returns NULL if arena_pool is NULL.
+ * Returns NULL if ar is NULL.
  */
 void* arena_malloc(arena* arena_pool, size_t size);
 
@@ -96,7 +96,7 @@ void* arena_malloc(arena* arena_pool, size_t size);
  * @brief Destroys the arena instance, freeing all internal blocks and the arena itself.
  * @param arena_pool Arena instance pointer. May be NULL (safe no-op).
  *
- * After this call, the ar pointer is invalid and must not be used.
+ * After this call, the arena_pool pointer is invalid and must not be used.
  * Passing NULL is safe and does nothing.
  * A new arena can be created afterward via arena_create().
  */

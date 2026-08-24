@@ -132,7 +132,7 @@ static bool arena_block_insert_tail(arena* arena_pool, size_t n){
  */
 static bool out_of_current_block_capacity(arena* arena_pool, size_t n){
 
-    if(arena_pool->current == NULL){
+    if(arena_pool->head == NULL && arena_pool->current == NULL){
         return true;
     }/* No block exists yet */
 
@@ -152,7 +152,7 @@ void* arena_calloc(arena* arena_pool, size_t count, size_t size){
         return NULL;
     }
 
-    if (count != 0 && size > SIZE_MAX / count){
+    if (size > SIZE_MAX / count){
         return NULL;
     }/* Multiplication overflow */
 
@@ -239,10 +239,6 @@ void arena_destroy(arena* arena_pool){
     if(arena_pool == NULL){
         return;
     }
-
-    // if(arena_pool->head == NULL){
-    //     return;
-    // }
 
     /* Traverse and free all blocks */
     while(arena_pool->head != NULL){
