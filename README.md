@@ -61,9 +61,9 @@ arena_destroy(tmp_arena);
 | Function | Description |
 |----------|-------------|
 | `arena_create()` | Create a new arena instance |
-| `arena_malloc(ar, size)` | Allocate `size` bytes, uninitialized |
-| `arena_calloc(ar, count, size)` | Allocate `count * size` bytes, zero-initialized |
-| `arena_destroy(ar)` | Free all blocks and the arena itself |
+| `arena_malloc(arena_pool, size)` | Allocate `size` bytes, uninitialized |
+| `arena_calloc(arena_pool, count, size)` | Allocate `count * size` bytes, zero-initialized |
+| `arena_destroy(arena_pool)` | Free all blocks and the arena itself |
 
 ## Benchmark
 
