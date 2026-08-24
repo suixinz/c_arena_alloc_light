@@ -77,7 +77,7 @@ arena* arena_create();
  *
  * Alignment guarantee: returned pointer address is a multiple of ALIGNMENT.
  * Overflow check: returns NULL if count * size overflows.
- * Returns NULL if ar is NULL.
+ * Returns NULL if arena_pool is NULL.
  */
 void* arena_calloc(arena* arena_pool, size_t count, size_t size);
 
@@ -88,7 +88,7 @@ void* arena_calloc(arena* arena_pool, size_t count, size_t size);
  * @return Aligned pointer to uninitialized memory on success, NULL on failure.
  *
  * Alignment guarantee: returned pointer address is a multiple of ALIGNMENT.
- * Returns NULL if ar is NULL.
+ * Returns NULL if arena_pool is NULL.
  */
 void* arena_malloc(arena* arena_pool, size_t size);
 
