@@ -1,26 +1,6 @@
-/**
+/*
  * @file arena.c
  * @brief Arena allocator implementation
- *
- * Copyright (c) 2026 [Zhang Shuwen / suixinz]
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
  */
 
 #include "arena.h"
@@ -61,27 +41,16 @@ static inline size_t align_up(size_t n){
 
 }
 
-/* ========== API Implementation ========== */
-
-arena* arena_create(){
-
-    arena* arena_pool = (arena*)calloc(1, sizeof(arena));
-
-    if(arena_pool == NULL){
-        return NULL;
-    }
-    /* head and current are zero-initialized to NULL by calloc.
-     * The first block is lazily allocated on first use. */
-
-    return arena_pool;
-
-}
-
 /**
- * @brief Appends a new block to the end of the arena's block list.
+ * @brief Appends a new memory block to the end of the arena's block list.
  * @param arena_pool Arena instance.
- * @param n  Requested allocation size (ensures the new block can hold at least n bytes).
+ * @param n Requested allocation size (ensures the new block can hold at least n bytes).
  * @return true on success, false on failure.
+ *
+ * Allocates a block descriptor and an actual memory buffer. The buffer capacity
+ * starts from ARENA_BLOCK_DEFAULT_CAPACITY and doubles until it can accommodate
+ * at least n bytes. On success, the new block is linked at the tail and becomes
+ * the current block.
  */
 static bool arena_block_insert_tail(arena* const arena_pool, size_t n){
 
@@ -125,24 +94,76 @@ static bool arena_block_insert_tail(arena* const arena_pool, size_t n){
 }
 
 /**
- * @brief Checks whether the current block has enough remaining space.
+ * @brief Locates a block with sufficient remaining capacity for an allocation.
  * @param arena_pool Arena instance.
- * @param n  Requested allocation size in bytes.
- * @return true if space is insufficient (new block needed), false if space is adequate.
+ * @param n Requested allocation size in bytes.
+ * @return true if a suitable block is found or created, false on failure.
+ *
+ * Starting from the current block, traverses the block list sequentially and
+ * checks whether align_padded remaining space can hold n bytes. If no existing
+ * block has enough room, a new block is appended automatically via
+ * arena_block_insert_tail(). The current pointer is advanced during traversal
+ * and left at the block that will serve the allocation.
  */
-static bool out_of_current_block_capacity(const arena* const arena_pool, size_t n){
+static bool find_sufficient_block(arena* const arena_pool, size_t n){
 
     if(arena_pool->head == NULL && arena_pool->current == NULL){
-        return true;
-    }/* No block exists yet */
-
-    size_t padded_offset = align_up(arena_pool->current->offset);
-
-    if(padded_offset + n > arena_pool->current->capacity){
-        return true;
+        return arena_block_insert_tail(arena_pool, n);
     }
 
-    return false;
+    while(arena_pool->current){
+
+        size_t padded_offset = align_up(arena_pool->current->offset);
+
+        if(padded_offset + n <= arena_pool->current->capacity){
+            return true;
+        }
+
+        if(arena_pool->current->next == NULL){
+            break;
+        }
+
+        arena_pool->current = arena_pool->current->next;
+
+    }
+
+    return arena_block_insert_tail(arena_pool, n);
+
+}
+
+/**
+ * @brief Frees a single block and its associated memory buffer.
+ * @param bck Block pointer; safe to pass NULL.
+ *
+ * Releases the memory buffer first, then the block descriptor itself.
+ * Does not unlink from the list — the caller is responsible for managing
+ * the linked list pointers.
+ */
+static void block_destroy(block* bck){
+
+    if(bck == NULL){
+        return;
+    }
+
+    free(bck->mem);
+    free(bck);
+
+}
+
+
+/* ========== API Implementation ========== */
+
+arena* arena_create(){
+
+    arena* arena_pool = (arena*)calloc(1, sizeof(arena));
+
+    if(arena_pool == NULL){
+        return NULL;
+    }
+    /* head and current are zero-initialized to NULL by calloc.
+     * The first block is lazily allocated on first use. */
+
+    return arena_pool;
 
 }
 
@@ -164,12 +185,8 @@ void* arena_calloc(arena* const arena_pool, size_t count, size_t size){
     }
 
     /* Ensure current block has room; allocate a new one if needed */
-    if(out_of_current_block_capacity(arena_pool, n_uchar)){
-
-        if(arena_block_insert_tail(arena_pool, n_uchar) == false){
-            return NULL;
-        }
-
+    if(find_sufficient_block(arena_pool, n_uchar) == false){
+        return NULL;
     }
 
     /* Align the start address */
@@ -199,12 +216,8 @@ void* arena_malloc(arena* const arena_pool, size_t size){
     }
 
     /* Ensure current block has room */
-    if(out_of_current_block_capacity(arena_pool, size)){
-
-        if(arena_block_insert_tail(arena_pool, size) == false){
-            return NULL;
-        }
-
+    if(find_sufficient_block(arena_pool, size) == false){
+        return NULL;
     }
 
     /* Align the start address */
@@ -219,18 +232,22 @@ void* arena_malloc(arena* const arena_pool, size_t size){
 
 }
 
-/**
- * @brief Frees a single block and its associated memory buffer.
- * @param bck Block pointer; safe to pass NULL.
- */
-static void block_destroy(block* bck){
+void arena_reset(arena* const arena_pool){
 
-    if(bck == NULL){
+    if(arena_pool == NULL){
         return;
     }
 
-    free(bck->mem);
-    free(bck);
+    block* cur_block = arena_pool->head;
+
+    while(cur_block){
+
+        cur_block->offset = 0;
+        cur_block = cur_block->next;
+
+    }
+
+    arena_pool->current = arena_pool->head;
 
 }
 

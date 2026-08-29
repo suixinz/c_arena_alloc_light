@@ -93,6 +93,17 @@ void* arena_calloc(arena* const arena_pool, size_t count, size_t size);
 void* arena_malloc(arena* const arena_pool, size_t size);
 
 /**
+ * @brief Resets the arena allocator, invalidating all previously allocated pointers.
+ * @param arena_pool Arena instance pointer. May be NULL (safe no-op).
+ *
+ * After this call, all memory blocks are retained but their used offsets are
+ * reset to zero. All pointers previously returned by arena_malloc/arena_calloc
+ * become invalid. The next allocation will reuse memory from the first block.
+ * A reset arena can be used immediately without calling arena_create() again.
+ */
+void arena_reset(arena* const arena_pool);
+
+/**
  * @brief Destroys the arena instance, freeing all internal blocks and the arena itself.
  * @param arena_pool Arena instance pointer. May be NULL (safe no-op).
  *
