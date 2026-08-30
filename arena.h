@@ -27,6 +27,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include <assert.h>
 
 /* ========== Configuration Macros ========== */
 
@@ -36,6 +37,16 @@
  * Default is 8 bytes, sufficient for most types (pointers, double, etc.).
  */
 #define ALIGNMENT 8
+#endif
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+
+static_assert(ALIGNMENT > 0 && (ALIGNMENT & (ALIGNMENT - 1)) == 0, "ALIGNMENT must be a power of two");
+
+#else
+
+typedef char static_assert_alignment [(ALIGNMENT > 0 && (ALIGNMENT & (ALIGNMENT - 1)) == 0) ? 1 : -1];
+
 #endif
 
 #ifndef ARENA_BLOCK_DEFAULT_CAPACITY
@@ -78,6 +89,10 @@ arena* arena_create();
  * Alignment guarantee: returned pointer address is a multiple of ALIGNMENT.
  * Overflow check: returns NULL if count * size overflows.
  * Returns NULL if arena is NULL.
+ *
+ * @warning Do NOT call free() on pointers returned by this function.
+ *          All memory is managed by the arena and released only by arena_destroy()
+ *          or reused by arena_reset().
  */
 void* arena_calloc(arena* const arena_pool, size_t count, size_t size);
 
@@ -89,6 +104,10 @@ void* arena_calloc(arena* const arena_pool, size_t count, size_t size);
  *
  * Alignment guarantee: returned pointer address is a multiple of ALIGNMENT.
  * Returns NULL if ar is NULL.
+ *
+ * @warning Do NOT call free() on pointers returned by this function.
+ *          All memory is managed by the arena and released only by arena_destroy()
+ *          or reused by arena_reset().
  */
 void* arena_malloc(arena* const arena_pool, size_t size);
 

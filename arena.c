@@ -4,7 +4,6 @@
  */
 
 #include "arena.h"
-#include <string.h>
 
 typedef struct block{
 
@@ -51,13 +50,12 @@ static inline size_t align_up(size_t n){
  * starts from ARENA_BLOCK_DEFAULT_CAPACITY and doubles until it can accommodate
  * at least n bytes. On success, the new block is linked at the tail and becomes
  * the current block.
+ *
+ * @note arena_pool must not be NULL. Caller is responsible for validation.
  */
 static bool arena_block_insert_tail(arena* const arena_pool, size_t n){
 
-    /* Allocate block descriptor */
-    block* new_block = (block*)malloc(sizeof(block));
-
-    if(new_block == NULL){
+    if(arena_pool == NULL){
         return false;
     }
 
@@ -65,7 +63,20 @@ static bool arena_block_insert_tail(arena* const arena_pool, size_t n){
     size_t new_block_capacity = ARENA_BLOCK_DEFAULT_CAPACITY;
 
     while (new_block_capacity < n){
+
+        if(new_block_capacity > SIZE_MAX / 2){
+            return false;
+        }
+
         new_block_capacity <<= 1;
+
+    }
+
+    /* Allocate block descriptor */
+    block* new_block = (block*)malloc(sizeof(block));
+
+    if(new_block == NULL){
+        return false;
     }
     
     /* Allocate the actual memory buffer */
@@ -104,8 +115,14 @@ static bool arena_block_insert_tail(arena* const arena_pool, size_t n){
  * block has enough room, a new block is appended automatically via
  * arena_block_insert_tail(). The current pointer is advanced during traversal
  * and left at the block that will serve the allocation.
+ *
+ * @pre arena_pool != NULL
  */
 static bool find_sufficient_block(arena* const arena_pool, size_t n){
+
+    if(arena_pool == NULL){
+        return false;
+    }
 
     if(arena_pool->head == NULL && arena_pool->current == NULL){
         return arena_block_insert_tail(arena_pool, n);
@@ -115,7 +132,7 @@ static bool find_sufficient_block(arena* const arena_pool, size_t n){
 
         size_t padded_offset = align_up(arena_pool->current->offset);
 
-        if(padded_offset + n <= arena_pool->current->capacity){
+        if(n <= arena_pool->current->capacity - padded_offset){
             return true;
         }
 
@@ -168,6 +185,11 @@ arena* arena_create(){
 }
 
 void* arena_calloc(arena* const arena_pool, size_t count, size_t size){
+
+    /* Validate inputs */
+    if(arena_pool == NULL){
+        return NULL;
+    }
     
     if(count == 0 || size == 0){
         return NULL;
@@ -179,11 +201,6 @@ void* arena_calloc(arena* const arena_pool, size_t count, size_t size){
 
     size_t n_uchar = count * size;
 
-    /* Validate inputs */
-    if(arena_pool == NULL){
-        return NULL;
-    }
-
     /* Ensure current block has room; allocate a new one if needed */
     if(find_sufficient_block(arena_pool, n_uchar) == false){
         return NULL;
@@ -191,6 +208,10 @@ void* arena_calloc(arena* const arena_pool, size_t count, size_t size){
 
     /* Align the start address */
     size_t padded_offset = align_up(arena_pool->current->offset);
+
+    if (n_uchar > arena_pool->current->capacity - padded_offset) {
+        return NULL;
+    }
 
     void* ptr = arena_pool->current->mem + padded_offset;
 
@@ -206,12 +227,12 @@ void* arena_calloc(arena* const arena_pool, size_t count, size_t size){
 
 void* arena_malloc(arena* const arena_pool, size_t size){
 
-    if (size == 0){
-        return NULL;
-    } 
-
      /* Validate inputs */
     if(arena_pool == NULL){
+        return NULL;
+    }
+
+    if (size == 0){
         return NULL;
     }
 
